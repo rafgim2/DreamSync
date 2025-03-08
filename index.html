@@ -142,9 +142,9 @@
     </footer>
 </div>
 
-<!-- Elemento de audio usando una ruta relativa -->
-<audio id="click-sound" preload="auto">
-    <source src="Beep.wav" type="audio/wav">
+<!-- Elemento de audio usando la URL RAW y crossorigin para evitar problemas de CORS -->
+<audio id="click-sound" preload="auto" crossorigin="anonymous">
+    <source src="https://raw.githubusercontent.com/rafgim2/DreamSync/main/Beep.wav" type="audio/wav">
     Tu navegador no soporta la reproducción de audio.
 </audio>
 
