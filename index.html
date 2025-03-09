@@ -81,7 +81,6 @@
             margin-top: -10px; 
             display: block; 
         }
-
         /* Media query para dispositivos móviles */
         @media (max-width: 600px) {
             .container {
@@ -258,8 +257,9 @@ function mostrarGrafico(tiemposMostrar = tiempos, precisionMostrar) {
 
 function guardarRegistro() {
     const nivelTexto = document.getElementById('precision').selectedOptions[0].text;
+    const valorPrecision = +document.getElementById('precision').value; // Se guarda el valor numérico
     const fecha = new Date().toLocaleString();
-    registros.push({ fecha, fallos: contadorFallos, tiempos, nivel: nivelTexto });
+    registros.push({ fecha, fallos: contadorFallos, tiempos, nivel: nivelTexto, valorPrecision });
     localStorage.setItem('dreamsync-registros', JSON.stringify(registros));
     actualizarHistorial();
 }
@@ -273,7 +273,8 @@ function actualizarHistorial() {
 
 function mostrarGraficoHistorico(index) {
     if(chart) chart.destroy();
-    mostrarGrafico(registros[index].tiempos, parseInt(registros[index].nivel));
+    // Se utiliza el valorPrecision guardado para mantener la coherencia en el historial
+    mostrarGrafico(registros[index].tiempos, registros[index].valorPrecision);
 }
 
 function borrarHistorial(){
