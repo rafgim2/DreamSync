@@ -81,6 +81,27 @@
             margin-top: -10px; 
             display: block; 
         }
+        /* Estilos para el termómetro */
+        #termometro {
+            width: 100%;
+            height: 30px;
+            border: 2px solid #ccc;
+            position: relative;
+            margin: 20px 0;
+        }
+        #termometro-bar {
+            height: 100%;
+            width: 0%;
+            background-color: green;
+            transition: width 0.1s, background-color 0.1s;
+        }
+        /* Estilos para la escala del termómetro */
+        #termometro-scale {
+            display: none;
+            font-size: 12px;
+            color: #333;
+            margin-bottom: 20px;
+        }
         /* Media query para dispositivos móviles */
         @media (max-width: 600px) {
             .container {
@@ -128,7 +149,18 @@
         <button id="btn-iniciar" onclick="iniciarMedicion()">Empezar</button>
         <button id="btn-terminar" onclick="pararMedicion()">Terminar</button>
     </div>
-    <canvas id="grafico"></canvas>
+
+    <!-- Área de visualización: termómetro (con escala) y gráfico -->
+    <div id="display-area">
+        <!-- Termómetro: se muestra durante la medición -->
+        <div id="termometro" style="display: none;">
+            <div id="termometro-bar"></div>
+        </div>
+        <!-- Escala del termómetro -->
+        <div id="termometro-scale"></div>
+        <!-- Gráfico: se muestra al terminar la medición -->
+        <canvas id="grafico" style="display: none;"></canvas>
+    </div>
 
     <h3>Historial de grabaciones</h3>
     <button class="borrar" onclick="borrarHistorial()">Borrar historial</button>
@@ -152,6 +184,8 @@ let midiendo = false, notaBuffer = [], tiempos = [], contadorFallos = 0, registr
 
 document.addEventListener("DOMContentLoaded", function() {
     document.getElementById("precision").value = "50"; // Selección por defecto: Intermedio (50 ms)
+    // Actualizamos la escala cada vez que se cambie el valor de precisión
+    document.getElementById('precision').addEventListener('change', updateScale);
 });
 
 navigator.requestMIDIAccess().then(midi => {
@@ -184,6 +218,7 @@ function getMIDIMessage(msg) {
         }
         tiempos.push(diff);
         document.getElementById('dreamsync-time').textContent = diff.toFixed(0) + ' ms';
+        updateThermometer(diff);
 
         if (diff > +document.getElementById('precision').value) {
             contadorFallos++;
@@ -197,6 +232,40 @@ function getMIDIMessage(msg) {
 
         notaBuffer = [];
     }
+}
+
+function updateThermometer(diff) {
+    const threshold = +document.getElementById('precision').value;
+    // Calculamos el porcentaje relativo al umbral (máximo 100%)
+    const percentage = Math.min((diff / threshold) * 100, 100);
+    const termometroBar = document.getElementById('termometro-bar');
+    termometroBar.style.width = percentage + '%';
+    termometroBar.style.backgroundColor = diff > threshold ? 'red' : 'green';
+}
+
+function updateScale() {
+    const precision = +document.getElementById('precision').value;
+    const scaleContainer = document.getElementById('termometro-scale');
+    // Limpiamos la escala anterior
+    scaleContainer.innerHTML = "";
+    // Determinamos un paso adecuado: por ejemplo, dividimos en 5 segmentos (al menos 1 ms)
+    const step = Math.ceil(precision / 5);
+    let ticks = [];
+    for (let i = 0; i <= precision; i += step) {
+        ticks.push(i);
+    }
+    // Nos aseguramos de incluir el valor exacto de precisión si no se alcanzó
+    if (ticks[ticks.length - 1] !== precision) {
+        ticks.push(precision);
+    }
+    // Configuramos el contenedor como flex para distribuir equitativamente los números
+    scaleContainer.style.display = 'flex';
+    scaleContainer.style.justifyContent = 'space-between';
+    ticks.forEach(tick => {
+        let span = document.createElement('span');
+        span.textContent = tick;
+        scaleContainer.appendChild(span);
+    });
 }
 
 function reproducirClic() {
@@ -224,6 +293,15 @@ function iniciarMedicion() {
     document.getElementById('dreamsync-time').textContent = '0 ms';
     // Restablecemos el fondo del contenedor a amarillo al iniciar
     document.getElementById('container').style.backgroundColor = "#fffee0";
+    // Mostrar el termómetro y su escala, y ocultar el gráfico
+    document.getElementById('termometro').style.display = 'block';
+    document.getElementById('termometro-scale').style.display = 'block';
+    document.getElementById('grafico').style.display = 'none';
+    // Reiniciamos la barra del termómetro
+    document.getElementById('termometro-bar').style.width = '0%';
+    document.getElementById('termometro-bar').style.backgroundColor = 'green';
+    // Actualizamos la escala según la precisión actual
+    updateScale();
     blinkInterval = setInterval(() => document.getElementById('btn-iniciar').classList.toggle('grabando'), 500);
     document.getElementById('btn-terminar').style.backgroundColor = "";
 }
@@ -234,6 +312,10 @@ function pararMedicion() {
     clearInterval(blinkInterval);
     document.getElementById('btn-iniciar').classList.remove('grabando');
     document.getElementById('btn-terminar').style.backgroundColor = "red";
+    // Al terminar, ocultamos el termómetro y su escala, y mostramos el gráfico
+    document.getElementById('termometro').style.display = 'none';
+    document.getElementById('termometro-scale').style.display = 'none';
+    document.getElementById('grafico').style.display = 'block';
     mostrarGrafico();
     guardarRegistro();
     // Al finalizar la grabación se restaura el fondo amarillo original
