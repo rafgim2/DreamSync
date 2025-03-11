@@ -21,6 +21,7 @@
             border-radius: 12px; 
             padding: 20px; 
             margin-top: 20px; 
+            position: relative; /* Para posicionar elementos absolutos dentro */
         }
         select { 
             padding: 10px; 
@@ -102,6 +103,13 @@
             color: #333;
             margin-bottom: 20px;
         }
+        /* Contenedor de banderitas dentro del contenedor azul */
+        #language-switcher {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 10;
+        }
         /* Media query para dispositivos móviles */
         @media (max-width: 600px) {
             .container {
@@ -127,27 +135,34 @@
 </head>
 <body>
 <div class="container" id="container">
-    <h1>-DreamSync-</h1>
-    <h4>Medidor de simultaneidad</h4>
+    <!-- Language switcher dentro del contenedor, esquina superior derecha -->
+    <div id="language-switcher">
+        <img src="https://cdn-icons-png.flaticon.com/512/197/197593.png" alt="Español" onclick="cambiarIdioma('es')" style="cursor:pointer; width:20px; margin-right:5px;">
+        <img src="https://cdn-icons-png.flaticon.com/512/197/197374.png" alt="English" onclick="cambiarIdioma('en')" style="cursor:pointer; width:20px;">
+    </div>
+    
+    <h1 data-i18n="title">-DreamSync-</h1>
+    <h4 data-i18n="subtitle">Medidor de simultaneidad</h4>
 
     <div>
-        Dispositivo MIDI: <span id="midi-device">Ninguno</span><br>
-        Precisión:
+        <span data-i18n="midiDeviceLabel">Dispositivo MIDI:</span> 
+        <span id="midi-device" data-i18n="none">Ninguno</span><br>
+        <span data-i18n="precisionLabel">Precisión:</span>
         <select id="precision">
-            <option value="15">Profesional (15 ms)</option>
-            <option value="30">Avanzado (30 ms)</option>
-            <option value="50">Intermedio (50 ms)</option>
-            <option value="80">Básico (80 ms)</option>
-            <option value="110">Elemental (110 ms)</option>
+            <option value="15" data-i18n="optionProfessional">Profesional (15 ms)</option>
+            <option value="30" data-i18n="optionAdvanced">Avanzado (30 ms)</option>
+            <option value="50" data-i18n="optionIntermediate">Intermedio (50 ms)</option>
+            <option value="80" data-i18n="optionBasic">Básico (80 ms)</option>
+            <option value="110" data-i18n="optionElementary">Elemental (110 ms)</option>
         </select>
         <span class="spacer"></span>
         <br>
-        <strong>Fallos:</strong> <span id="contador">0</span><br>
-        <strong>DreamSync Time:</strong> <span id="dreamsync-time">0 ms</span>
+        <strong><span data-i18n="errorsLabel">Fallos:</span></strong> <span id="contador">0</span><br>
+        <strong><span data-i18n="dreamsyncTimeLabel">DreamSync Time:</span></strong> <span id="dreamsync-time">0 ms</span>
         <span class="spacer"></span>
         <br>
-        <button id="btn-iniciar" onclick="iniciarMedicion()">Empezar</button>
-        <button id="btn-terminar" onclick="pararMedicion()">Terminar</button>
+        <button id="btn-iniciar" onclick="iniciarMedicion()" data-i18n="start">Empezar</button>
+        <button id="btn-terminar" onclick="pararMedicion()" data-i18n="stop">Terminar</button>
     </div>
 
     <!-- Área de visualización: termómetro (con escala) y gráfico -->
@@ -164,14 +179,14 @@
         <p id="media-resultados" style="display: none; font-weight: bold;"></p>
     </div>
 
-    <h3>Historial de grabaciones</h3>
-    <button class="borrar" onclick="borrarHistorial()">Borrar historial</button>
+    <h3 data-i18n="recordingHistory">Historial de grabaciones</h3>
+    <button class="borrar" onclick="borrarHistorial()" data-i18n="deleteHistory">Borrar historial</button>
     <div class="historial-container">
         <ul id="historial"></ul>
     </div>
 
     <footer>
-        <a href="https://www.youtube.com/@rafgim" target="_blank">© By Rafael Gimeno</a>
+        <a href="https://www.youtube.com/@rafgim" target="_blank" data-i18n="footer">© By Rafael Gimeno</a>
     </footer>
 </div>
 
@@ -182,11 +197,11 @@
 </audio>
 
 <script>
+let currentLanguage = 'es';
 let midiendo = false, notaBuffer = [], tiempos = [], contadorFallos = 0, registros = [], chart = null, blinkInterval = null;
 
 document.addEventListener("DOMContentLoaded", function() {
     document.getElementById("precision").value = "50"; // Selección por defecto: Intermedio (50 ms)
-    // Actualizamos la escala cada vez que se cambie el valor de precisión
     document.getElementById('precision').addEventListener('change', updateScale);
 });
 
@@ -225,20 +240,16 @@ function getMIDIMessage(msg) {
         if (diff > +document.getElementById('precision').value) {
             contadorFallos++;
             document.getElementById('contador').textContent = contadorFallos;
-            // Fondo rojo si se supera el umbral
             container.style.backgroundColor = "#ffcccc";
         } else {
-            // Fondo verde si está dentro del umbral
             container.style.backgroundColor = "#ccffcc";
         }
-
         notaBuffer = [];
     }
 }
 
 function updateThermometer(diff) {
     const threshold = +document.getElementById('precision').value;
-    // Calculamos el porcentaje relativo al umbral (máximo 100%)
     const percentage = Math.min((diff / threshold) * 100, 100);
     const termometroBar = document.getElementById('termometro-bar');
     termometroBar.style.width = percentage + '%';
@@ -248,19 +259,15 @@ function updateThermometer(diff) {
 function updateScale() {
     const precision = +document.getElementById('precision').value;
     const scaleContainer = document.getElementById('termometro-scale');
-    // Limpiamos la escala anterior
     scaleContainer.innerHTML = "";
-    // Determinamos un paso adecuado: por ejemplo, dividimos en 5 segmentos (al menos 1 ms)
     const step = Math.ceil(precision / 5);
     let ticks = [];
     for (let i = 0; i <= precision; i += step) {
         ticks.push(i);
     }
-    // Nos aseguramos de incluir el valor exacto de precisión si no se alcanzó
     if (ticks[ticks.length - 1] !== precision) {
         ticks.push(precision);
     }
-    // Configuramos el contenedor como flex para distribuir equitativamente los números
     scaleContainer.style.display = 'flex';
     scaleContainer.style.justifyContent = 'space-between';
     ticks.forEach(tick => {
@@ -276,16 +283,13 @@ function reproducirClic() {
         console.error("Elemento de audio no encontrado");
         return;
     }
-    console.log("Reproduciendo sonido de clic");
-    audio.volume = 1; // Volumen máximo
-    audio.currentTime = 0; // Reiniciar el audio para reproducirlo desde el inicio
-    audio.play().catch((error) => {
-        console.error("Error al reproducir el sonido:", error);
-    });
+    audio.volume = 1;
+    audio.currentTime = 0;
+    audio.play().catch((error) => console.error("Error al reproducir el sonido:", error));
 }
 
 function iniciarMedicion() {
-    reproducirClic(); // Clic al iniciar
+    reproducirClic();
     if(chart) chart.destroy();
     tiempos = []; 
     contadorFallos = 0; 
@@ -293,41 +297,34 @@ function iniciarMedicion() {
     midiendo = true;
     document.getElementById('contador').textContent = 0;
     document.getElementById('dreamsync-time').textContent = '0 ms';
-    // Restablecemos el fondo del contenedor a amarillo al iniciar
     document.getElementById('container').style.backgroundColor = "#fffee0";
-    // Mostrar el termómetro y su escala, y ocultar el gráfico y la media
     document.getElementById('termometro').style.display = 'block';
     document.getElementById('termometro-scale').style.display = 'block';
     document.getElementById('grafico').style.display = 'none';
     document.getElementById('media-resultados').style.display = 'none';
-    // Reiniciamos la barra del termómetro
     document.getElementById('termometro-bar').style.width = '0%';
     document.getElementById('termometro-bar').style.backgroundColor = 'green';
-    // Actualizamos la escala según la precisión actual
     updateScale();
     blinkInterval = setInterval(() => document.getElementById('btn-iniciar').classList.toggle('grabando'), 500);
     document.getElementById('btn-terminar').style.backgroundColor = "";
 }
 
 function pararMedicion() {
-    reproducirClic(); // Clic al terminar
+    reproducirClic();
     midiendo = false;
     clearInterval(blinkInterval);
     document.getElementById('btn-iniciar').classList.remove('grabando');
     document.getElementById('btn-terminar').style.backgroundColor = "red";
-    // Al terminar, ocultamos el termómetro y su escala, y mostramos el gráfico
     document.getElementById('termometro').style.display = 'none';
     document.getElementById('termometro-scale').style.display = 'none';
     document.getElementById('grafico').style.display = 'block';
     mostrarGrafico();
     guardarRegistro();
-    // Al finalizar la grabación se restaura el fondo amarillo original
     document.getElementById('container').style.backgroundColor = "#fffee0";
 }
 
 function mostrarGrafico(tiemposMostrar = tiempos, precisionMostrar) {
     const precision = precisionMostrar || +document.getElementById('precision').value;
-    // Destruir gráfico anterior si existe
     if(chart) chart.destroy();
     
     chart = new Chart(document.getElementById('grafico'), {
@@ -342,7 +339,6 @@ function mostrarGrafico(tiemposMostrar = tiempos, precisionMostrar) {
         }
     });
     
-    // Calcular la media y mostrarla debajo de la gráfica
     let media = 0;
     if(tiemposMostrar.length > 0) {
         media = tiemposMostrar.reduce((a, b) => a + b, 0) / tiemposMostrar.length;
@@ -353,15 +349,29 @@ function mostrarGrafico(tiemposMostrar = tiempos, precisionMostrar) {
 }
 
 function guardarRegistro() {
-    const nivelTexto = document.getElementById('precision').selectedOptions[0].text;
-    const valorPrecision = +document.getElementById('precision').value; // Se guarda el valor numérico
+    const valorPrecision = +document.getElementById('precision').value;
+    // Mapeo de valores de precisión a claves de traducción
+    const levelMapping = {
+        15: 'optionProfessional',
+        30: 'optionAdvanced',
+        50: 'optionIntermediate',
+        80: 'optionBasic',
+        110: 'optionElementary'
+    };
+    const nivelKey = levelMapping[valorPrecision];
     const fecha = new Date().toLocaleString();
-    // Calcular la media de los tiempos
     let media = 0;
     if(tiempos.length > 0) {
         media = tiempos.reduce((acc, val) => acc + val, 0) / tiempos.length;
     }
-    registros.push({ fecha, fallos: contadorFallos, tiempos, nivel: nivelTexto, valorPrecision, media: media.toFixed(0) });
+    registros.push({ 
+        fecha, 
+        fallos: contadorFallos, 
+        tiempos, 
+        nivel: nivelKey, 
+        valorPrecision, 
+        media: media.toFixed(0) 
+    });
     localStorage.setItem('dreamsync-registros', JSON.stringify(registros));
     actualizarHistorial();
 }
@@ -369,13 +379,14 @@ function guardarRegistro() {
 function actualizarHistorial() {
     registros = JSON.parse(localStorage.getItem('dreamsync-registros')) || [];
     document.getElementById('historial').innerHTML = registros.map((r, i) => 
-        `<li class="historial-item" onclick="mostrarGraficoHistorico(${i})">${r.fecha}: Fallos ${r.fallos}, Nivel ${r.nivel}, Media ${r.media} ms</li>`
+        `<li class="historial-item" onclick="mostrarGraficoHistorico(${i})">
+            ${r.fecha}: ${translations[currentLanguage].errorsLabel} ${r.fallos}, ${translations[currentLanguage].levelLabel} ${translations[currentLanguage][r.nivel]}, Media ${r.media} ms
+         </li>`
     ).join('');
 }
 
 function mostrarGraficoHistorico(index) {
     if(chart) chart.destroy();
-    // Se utiliza el valorPrecision guardado para mantener la coherencia en el historial
     mostrarGrafico(registros[index].tiempos, registros[index].valorPrecision);
 }
 
@@ -386,7 +397,74 @@ function borrarHistorial(){
     if(chart) chart.destroy();
 }
 
-window.onload = actualizarHistorial;
+//////////////////////////
+// Traducción (i18n)
+//////////////////////////
+
+const translations = {
+    es: {
+        title: "-DreamSync-",
+        subtitle: "Medidor de simultaneidad",
+        midiDeviceLabel: "Dispositivo MIDI:",
+        none: "Ninguno",
+        precisionLabel: "Precisión:",
+        errorsLabel: "Fallos:",
+        dreamsyncTimeLabel: "DreamSync Time:",
+        start: "Empezar",
+        stop: "Terminar",
+        recordingHistory: "Historial de grabaciones",
+        deleteHistory: "Borrar historial",
+        footer: "© By Rafael Gimeno",
+        optionProfessional: "Profesional (15 ms)",
+        optionAdvanced: "Avanzado (30 ms)",
+        optionIntermediate: "Intermedio (50 ms)",
+        optionBasic: "Básico (80 ms)",
+        optionElementary: "Elemental (110 ms)",
+        levelLabel: "Nivel:"
+    },
+    en: {
+        title: "-DreamSync-",
+        subtitle: "Simultaneity Meter",
+        midiDeviceLabel: "MIDI Device:",
+        none: "None",
+        precisionLabel: "Precision:",
+        errorsLabel: "Errors:",
+        dreamsyncTimeLabel: "DreamSync Time:",
+        start: "Start",
+        stop: "Stop",
+        recordingHistory: "Recordings History",
+        deleteHistory: "Delete History",
+        footer: "© By Rafael Gimeno",
+        optionProfessional: "Professional (15 ms)",
+        optionAdvanced: "Advanced (30 ms)",
+        optionIntermediate: "Intermediate (50 ms)",
+        optionBasic: "Basic (80 ms)",
+        optionElementary: "Elementary (110 ms)",
+        levelLabel: "Level:"
+    }
+};
+
+function cambiarIdioma(lang) {
+    currentLanguage = lang;
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (translations[lang] && translations[lang][key]) {
+            el.textContent = translations[lang][key];
+        }
+    });
+    const midiDeviceElem = document.getElementById('midi-device');
+    if(midiDeviceElem) {
+       if(midiDeviceElem.textContent === translations['es']['none'] || midiDeviceElem.textContent === translations['en']['none']){
+          midiDeviceElem.textContent = translations[lang]['none'];
+       }
+    }
+    actualizarHistorial();
+}
+
+window.onload = function() {
+    actualizarHistorial();
+    cambiarIdioma('es');
+};
 </script>
 </body>
 </html>
