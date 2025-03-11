@@ -203,9 +203,9 @@ let midiendo = false, notaBuffer = [], tiempos = [], contadorFallos = 0, registr
 document.addEventListener("DOMContentLoaded", function() {
     document.getElementById("precision").value = "50"; // Selección por defecto: Intermedio (50 ms)
     document.getElementById('precision').addEventListener('change', updateScale);
-    // Estado inicial: "Terminar" y "Borrar historial" deshabilitados
+    // Estado inicial: solo "Terminar" deshabilitado. "Borrar historial" se habilita al cargar.
     document.getElementById('btn-terminar').disabled = true;
-    document.querySelector('button.borrar').disabled = true;
+    document.querySelector('button.borrar').disabled = false;
 });
 
 navigator.requestMIDIAccess().then(midi => {
@@ -245,7 +245,6 @@ function getMIDIMessage(msg) {
             container.style.backgroundColor = "#ccffcc";
         }
         notaBuffer = [];
-        
         // Actualizar la media en tiempo real
         if(tiempos.length > 0) {
             let media = tiempos.reduce((a, b) => a + b, 0) / tiempos.length;
