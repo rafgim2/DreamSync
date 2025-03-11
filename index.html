@@ -176,7 +176,7 @@
         <!-- Gráfico: se muestra al terminar la medición -->
         <canvas id="grafico" style="display: none;"></canvas>
         <!-- Elemento para mostrar la media -->
-        <p id="media-resultados" style="display: none; font-weight: bold;"></p>
+        <p id="media-resultados" style="display: block; font-weight: bold;">Media: 0 ms</p>
     </div>
 
     <h3 data-i18n="recordingHistory">Historial de grabaciones</h3>
@@ -190,7 +190,7 @@
     </footer>
 </div>
 
-<!-- Elemento de audio usando la URL RAW y crossorigin para evitar problemas de CORS -->
+<!-- Elemento de audio -->
 <audio id="click-sound" preload="auto">
   <source src="https://cdn.jsdelivr.net/gh/rafgim/NUEVO@main/Beep.wav" type="audio/wav">
     Tu navegador no soporta la reproducción de audio.
@@ -203,6 +203,9 @@ let midiendo = false, notaBuffer = [], tiempos = [], contadorFallos = 0, registr
 document.addEventListener("DOMContentLoaded", function() {
     document.getElementById("precision").value = "50"; // Selección por defecto: Intermedio (50 ms)
     document.getElementById('precision').addEventListener('change', updateScale);
+    // Estado inicial: "Terminar" y "Borrar historial" deshabilitados
+    document.getElementById('btn-terminar').disabled = true;
+    document.querySelector('button.borrar').disabled = true;
 });
 
 navigator.requestMIDIAccess().then(midi => {
@@ -221,10 +224,8 @@ navigator.requestMIDIAccess().then(midi => {
 
 function getMIDIMessage(msg) {
     if (!midiendo || msg.data[0] !== 144 || msg.data[2] === 0) return;
-
     const tiempoActual = performance.now();
     const container = document.getElementById('container');
-
     if (notaBuffer.length === 0) {
         notaBuffer.push(tiempoActual);
     } else {
@@ -236,7 +237,6 @@ function getMIDIMessage(msg) {
         tiempos.push(diff);
         document.getElementById('dreamsync-time').textContent = diff.toFixed(0) + ' ms';
         updateThermometer(diff);
-
         if (diff > +document.getElementById('precision').value) {
             contadorFallos++;
             document.getElementById('contador').textContent = contadorFallos;
@@ -245,6 +245,14 @@ function getMIDIMessage(msg) {
             container.style.backgroundColor = "#ccffcc";
         }
         notaBuffer = [];
+        
+        // Actualizar la media en tiempo real
+        if(tiempos.length > 0) {
+            let media = tiempos.reduce((a, b) => a + b, 0) / tiempos.length;
+            const mediaElem = document.getElementById('media-resultados');
+            mediaElem.style.display = 'block';
+            mediaElem.textContent = 'Media: ' + media.toFixed(0) + ' ms';
+        }
     }
 }
 
@@ -301,12 +309,22 @@ function iniciarMedicion() {
     document.getElementById('termometro').style.display = 'block';
     document.getElementById('termometro-scale').style.display = 'block';
     document.getElementById('grafico').style.display = 'none';
-    document.getElementById('media-resultados').style.display = 'none';
+    // Mostrar la media desde el inicio
+    const mediaElem = document.getElementById('media-resultados');
+    mediaElem.style.display = 'block';
+    mediaElem.textContent = 'Media: 0 ms';
     document.getElementById('termometro-bar').style.width = '0%';
     document.getElementById('termometro-bar').style.backgroundColor = 'green';
     updateScale();
     blinkInterval = setInterval(() => document.getElementById('btn-iniciar').classList.toggle('grabando'), 500);
-    document.getElementById('btn-terminar').style.backgroundColor = "";
+    
+    // Restablecer color del botón "Terminar" a azul
+    document.getElementById('btn-terminar').style.backgroundColor = "#4a90e2";
+    // Deshabilitar "Empezar" y habilitar "Terminar"
+    document.getElementById('btn-iniciar').disabled = true;
+    document.getElementById('btn-terminar').disabled = false;
+    // Deshabilitar botón "Borrar historial" durante la grabación
+    document.querySelector('button.borrar').disabled = true;
 }
 
 function pararMedicion() {
@@ -321,6 +339,12 @@ function pararMedicion() {
     mostrarGrafico();
     guardarRegistro();
     document.getElementById('container').style.backgroundColor = "#fffee0";
+    
+    // Habilitar "Empezar" y deshabilitar "Terminar"
+    document.getElementById('btn-iniciar').disabled = false;
+    document.getElementById('btn-terminar').disabled = true;
+    // Habilitar el botón "Borrar historial" al finalizar la grabación
+    document.querySelector('button.borrar').disabled = false;
 }
 
 function mostrarGrafico(tiemposMostrar = tiempos, precisionMostrar) {
@@ -350,7 +374,6 @@ function mostrarGrafico(tiemposMostrar = tiempos, precisionMostrar) {
 
 function guardarRegistro() {
     const valorPrecision = +document.getElementById('precision').value;
-    // Mapeo de valores de precisión a claves de traducción
     const levelMapping = {
         15: 'optionProfessional',
         30: 'optionAdvanced',
@@ -386,6 +409,8 @@ function actualizarHistorial() {
 }
 
 function mostrarGraficoHistorico(index) {
+    // Bloquear la acción si se está grabando
+    if(midiendo) return;
     if(chart) chart.destroy();
     mostrarGrafico(registros[index].tiempos, registros[index].valorPrecision);
 }
