@@ -160,6 +160,8 @@
         <div id="termometro-scale"></div>
         <!-- Gráfico: se muestra al terminar la medición -->
         <canvas id="grafico" style="display: none;"></canvas>
+        <!-- Elemento para mostrar la media -->
+        <p id="media-resultados" style="display: none; font-weight: bold;"></p>
     </div>
 
     <h3>Historial de grabaciones</h3>
@@ -293,10 +295,11 @@ function iniciarMedicion() {
     document.getElementById('dreamsync-time').textContent = '0 ms';
     // Restablecemos el fondo del contenedor a amarillo al iniciar
     document.getElementById('container').style.backgroundColor = "#fffee0";
-    // Mostrar el termómetro y su escala, y ocultar el gráfico
+    // Mostrar el termómetro y su escala, y ocultar el gráfico y la media
     document.getElementById('termometro').style.display = 'block';
     document.getElementById('termometro-scale').style.display = 'block';
     document.getElementById('grafico').style.display = 'none';
+    document.getElementById('media-resultados').style.display = 'none';
     // Reiniciamos la barra del termómetro
     document.getElementById('termometro-bar').style.width = '0%';
     document.getElementById('termometro-bar').style.backgroundColor = 'green';
@@ -324,6 +327,9 @@ function pararMedicion() {
 
 function mostrarGrafico(tiemposMostrar = tiempos, precisionMostrar) {
     const precision = precisionMostrar || +document.getElementById('precision').value;
+    // Destruir gráfico anterior si existe
+    if(chart) chart.destroy();
+    
     chart = new Chart(document.getElementById('grafico'), {
         type: 'bar',
         data: {
@@ -335,13 +341,27 @@ function mostrarGrafico(tiemposMostrar = tiempos, precisionMostrar) {
             }]
         }
     });
+    
+    // Calcular la media y mostrarla debajo de la gráfica
+    let media = 0;
+    if(tiemposMostrar.length > 0) {
+        media = tiemposMostrar.reduce((a, b) => a + b, 0) / tiemposMostrar.length;
+    }
+    const mediaElem = document.getElementById('media-resultados');
+    mediaElem.style.display = 'block';
+    mediaElem.textContent = 'Media: ' + media.toFixed(0) + ' ms';
 }
 
 function guardarRegistro() {
     const nivelTexto = document.getElementById('precision').selectedOptions[0].text;
     const valorPrecision = +document.getElementById('precision').value; // Se guarda el valor numérico
     const fecha = new Date().toLocaleString();
-    registros.push({ fecha, fallos: contadorFallos, tiempos, nivel: nivelTexto, valorPrecision });
+    // Calcular la media de los tiempos
+    let media = 0;
+    if(tiempos.length > 0) {
+        media = tiempos.reduce((acc, val) => acc + val, 0) / tiempos.length;
+    }
+    registros.push({ fecha, fallos: contadorFallos, tiempos, nivel: nivelTexto, valorPrecision, media: media.toFixed(0) });
     localStorage.setItem('dreamsync-registros', JSON.stringify(registros));
     actualizarHistorial();
 }
@@ -349,7 +369,7 @@ function guardarRegistro() {
 function actualizarHistorial() {
     registros = JSON.parse(localStorage.getItem('dreamsync-registros')) || [];
     document.getElementById('historial').innerHTML = registros.map((r, i) => 
-        `<li class="historial-item" onclick="mostrarGraficoHistorico(${i})">${r.fecha}: Fallos ${r.fallos}, Nivel ${r.nivel}</li>`
+        `<li class="historial-item" onclick="mostrarGraficoHistorico(${i})">${r.fecha}: Fallos ${r.fallos}, Nivel ${r.nivel}, Media ${r.media} ms</li>`
     ).join('');
 }
 
